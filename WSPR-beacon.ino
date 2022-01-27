@@ -34,16 +34,18 @@
 
 #define TIME_HEADER             "T"           // Header tag for serial time sync message
 #define TIME_REQUEST            7             // ASCII bell character requests a time sync message 
-
-#define TX_LED_PIN              13
+#define GREEN                   5
+#define RED                     4
+#define YELLOW                  3
+#define TX_LED_PIN              7
 //#define SYNC_LED_PIN            13
-TinyGPS gps;
+//TinyGPS gps;
 Si5351 si5351;
 
 JTEncode jtencode;
 unsigned long freq = 7040500UL;                // Change this
-char call[7] = "VK2TPM";                        // Change this
-char loc[5] = "QF56";                           // Change this
+char call[7] = " K5TNA";                        // Change this
+char loc[5] = "EM20";                           // Change this
 uint8_t dbm = 10;
 uint8_t tx_buffer[SYMBOL_COUNT];
 
@@ -56,7 +58,7 @@ volatile bool proceed = false;
 ISR(TIMER1_COMPA_vect)
 {
     proceed = true;
-    // Serial.println("timer fired");
+     //Serial.println("timer fired");
 }
 
 // Loop through the string, transmitting one character at a time.
@@ -72,12 +74,15 @@ void encode()
 
     // Now do the rest of the message
     for(i = 0; i < SYMBOL_COUNT; i++)
-    {
+    {digitalWrite(RED,HIGH);
+    digitalWrite(YELLOW,HIGH);
       uint64_t frequency = (freq * 100) + (tx_buffer[i] * TONE_SPACING);
         si5351.set_freq(frequency, SI5351_CLK0);
         Serial.print("freq = ");
         Serial.println(tx_buffer[i]);
         proceed = false;
+        digitalWrite(RED,LOW);
+    digitalWrite(YELLOW,LOW);
         while(!proceed);
     }
     Serial.println("message done");
@@ -89,11 +94,21 @@ void encode()
 void setup()
 {
    Serial.begin(9600);
-   Serial.println("setup");
+   Serial.println("------->WSPR-beacon setup");
+   delay(1000);
   // Use the Arduino's on-board LED as a keying indicator.
   pinMode(TX_LED_PIN, OUTPUT);
-
-  digitalWrite(TX_LED_PIN, LOW);
+  pinMode(GREEN, OUTPUT);
+  pinMode(RED, OUTPUT);
+  pinMode(YELLOW, OUTPUT);
+  digitalWrite(RED,HIGH);
+  digitalWrite(YELLOW,HIGH);
+  digitalWrite(TX_LED_PIN, HIGH);
+  digitalWrite(GREEN, HIGH);
+  delay(5000);
+digitalWrite(TX_LED_PIN, LOW);
+ digitalWrite(RED,LOW);
+  digitalWrite(YELLOW,LOW);
   Serial.begin(9600);
 
   // Set time sync provider
@@ -102,13 +117,15 @@ void setup()
   // Initialize the Si5351
   // Change the 2nd parameter in init if using a ref osc other
   // than 25 MHz
+  Serial.println("init Si5351"); delay(10000);
   si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, CORRECTION);
-
+ Serial.println("init Si5351 complete"); delay(10000);
   // Set CLK0 output
   si5351.set_freq(freq * 100, SI5351_CLK0);
+  digitalWrite(GREEN, LOW);
   si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA); // Set for max power
   si5351.set_clock_pwr(SI5351_CLK0, 0); // Disable the clock initially
-
+digitalWrite(GREEN, LOW);
   // Set up Timer1 for interrupts every symbol period.
   noInterrupts();          // Turn off interrupts.
   TCCR1A = 0;              // Set entire TCCR1A register to 0; disconnects
@@ -122,7 +139,8 @@ void setup()
   TIMSK1 = (1 << OCIE1A);  // Enable timer compare interrupt.
   OCR1A = WSPR_CTC;       // Set up interrupt trigger count;
   interrupts();            // Re-enable interrupts.
-
+  digitalWrite(TX_LED_PIN,HIGH);
+  Serial.println("call encode"); 
   encode(); // transmit once and stop
 }
 
@@ -131,7 +149,10 @@ void loop()
 {
    // blink LED when we've finished the transmit
   digitalWrite(TX_LED_PIN, HIGH);
-  delay(500);
+  digitalWrite(GREEN, LOW);
+  delay(2000);
   digitalWrite(TX_LED_PIN, LOW);
-  delay(500);
+  digitalWrite(GREEN, HIGH);
+  delay(2000);
+  // Serial.println("Sending completed");
 }
