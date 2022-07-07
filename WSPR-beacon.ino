@@ -1,4 +1,6 @@
 /*
+ * Modified 07 July 2022 - K5TNA
+ * 
  * Minimal WSPR beacon using Si5351Arduino library
  *
  * Based on code:
@@ -51,7 +53,7 @@ uint8_t tx_buffer[SYMBOL_COUNT];
 
 // Global variables used in ISRs
 volatile bool proceed = false;
-
+////////////////////////////////////////////////////////////////////////////
 // Timer interrupt vector.  This toggles the variable we use to gate
 // each column of output to ensure accurate timing.  Called whenever
 // Timer1 hits the count set below in setup().
@@ -60,6 +62,7 @@ ISR(TIMER1_COMPA_vect)
     proceed = true;
      //Serial.println("timer fired");
 }
+/////////////////////////////////////////////////////
 
 // Loop through the string, transmitting one character at a time.
 void encode()
@@ -90,11 +93,12 @@ void encode()
     si5351.set_clock_pwr(SI5351_CLK0, 0);
     digitalWrite(TX_LED_PIN, LOW);
 }
-
+/*================== setup code */
 void setup()
 {
    Serial.begin(9600);
    Serial.println("------->WSPR-beacon setup");
+   Serial.println("Modified by K5TNA");
    delay(1000);
   // Use the Arduino's on-board LED as a keying indicator.
   pinMode(TX_LED_PIN, OUTPUT);
@@ -106,8 +110,8 @@ void setup()
   digitalWrite(TX_LED_PIN, HIGH);
   digitalWrite(GREEN, HIGH);
   delay(5000);
-digitalWrite(TX_LED_PIN, LOW);
- digitalWrite(RED,LOW);
+  digitalWrite(TX_LED_PIN, LOW);
+  digitalWrite(RED,LOW);
   digitalWrite(YELLOW,LOW);
   Serial.begin(9600);
 
@@ -117,15 +121,21 @@ digitalWrite(TX_LED_PIN, LOW);
   // Initialize the Si5351
   // Change the 2nd parameter in init if using a ref osc other
   // than 25 MHz
-  Serial.println("init Si5351"); delay(10000);
-  si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, CORRECTION);
- Serial.println("init Si5351 complete"); delay(10000);
+  /* check to see if the Si5351 is present
+   */
+  Serial.println("init Si5351"); delay(1000);
+  if(!si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, CORRECTION)){
+    Serial.println("si5351 init failed"); 
+    delay(5000);
+  }
+    Serial.println("init Si5351 complete"); delay(10000);
   // Set CLK0 output
   si5351.set_freq(freq * 100, SI5351_CLK0);
+  
   digitalWrite(GREEN, LOW);
   si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA); // Set for max power
   si5351.set_clock_pwr(SI5351_CLK0, 0); // Disable the clock initially
-digitalWrite(GREEN, LOW);
+  digitalWrite(GREEN, LOW);
   // Set up Timer1 for interrupts every symbol period.
   noInterrupts();          // Turn off interrupts.
   TCCR1A = 0;              // Set entire TCCR1A register to 0; disconnects
