@@ -45,7 +45,9 @@
 Si5351 si5351;
 
 JTEncode jtencode;
-unsigned long freq = 7040500UL;                // Change this
+ //unsigned long freq =    7040500UL;                // Change this
+ unsigned long freq =     10140200UL;                // Change this
+//unsigned long freq =   18106000UL;                // Change this
 char call[7] = " K5TNA";                        // Change this
 char loc[5] = "EM20";                           // Change this
 uint8_t dbm = 10;
@@ -63,7 +65,7 @@ ISR(TIMER1_COMPA_vect)
      //Serial.println("timer fired");
 }
 /////////////////////////////////////////////////////
-
+//  ENCODE function
 // Loop through the string, transmitting one character at a time.
 void encode()
 {
@@ -126,9 +128,9 @@ void setup()
   Serial.println("init Si5351"); delay(1000);
   if(!si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, CORRECTION)){
     Serial.println("si5351 init failed"); 
-    delay(5000);
+    delay(1000);
   }
-    Serial.println("init Si5351 complete"); delay(10000);
+    Serial.println("init of Si5351 complete"); delay(10000);
   // Set CLK0 output
   si5351.set_freq(freq * 100, SI5351_CLK0);
   
@@ -136,6 +138,7 @@ void setup()
   si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA); // Set for max power
   si5351.set_clock_pwr(SI5351_CLK0, 0); // Disable the clock initially
   digitalWrite(GREEN, LOW);
+  Serial.println("Init timer interrupts");
   // Set up Timer1 for interrupts every symbol period.
   noInterrupts();          // Turn off interrupts.
   TCCR1A = 0;              // Set entire TCCR1A register to 0; disconnects
@@ -150,13 +153,15 @@ void setup()
   OCR1A = WSPR_CTC;       // Set up interrupt trigger count;
   interrupts();            // Re-enable interrupts.
   digitalWrite(TX_LED_PIN,HIGH);
-  Serial.println("call encode"); 
-  encode(); // transmit once and stop
+ 
 }
 
 
 void loop()
 {
+   Serial.println("transmission starts -- call encode");
+   interrupts();
+  encode(); // transmit once and stop
    // blink LED when we've finished the transmit
   digitalWrite(TX_LED_PIN, HIGH);
   digitalWrite(GREEN, LOW);
@@ -164,5 +169,5 @@ void loop()
   digitalWrite(TX_LED_PIN, LOW);
   digitalWrite(GREEN, HIGH);
   delay(2000);
-  // Serial.println("Sending completed");
+  Serial.println("Sending completed - now send again.....");
 }
