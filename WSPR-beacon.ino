@@ -26,13 +26,15 @@
 #include "Wire.h"
 #include <JTEncode.h>
 #include <int.h>
-#include <TinyGPS.h>
+// #include <TinyGPS.h>
 #include "Wire.h"
 
 #define TONE_SPACING            146           // ~1.46 Hz
 #define WSPR_CTC                10672         // CTC value for WSPR
 #define SYMBOL_COUNT            WSPR_SYMBOL_COUNT
-#define CORRECTION              0             // Change this for your ref osc
+
+// Negative correction raises the frequency
+#define CORRECTION              -1090000            // Change this for your ref osc
 
 #define TIME_HEADER             "T"           // Header tag for serial time sync message
 #define TIME_REQUEST            7             // ASCII bell character requests a time sync message 
@@ -41,15 +43,20 @@
 #define YELLOW                  3
 #define TX_LED_PIN              7
 //#define SYNC_LED_PIN            13
-//TinyGPS gps;
+
 Si5351 si5351;
 
 JTEncode jtencode;
  //unsigned long freq =    7040500UL;                // Change this
  unsigned long freq =     10140200UL;                // Change this
+ //unsigned long freq =  1000000UL;
 //unsigned long freq =   18106000UL;                // Change this
-char call[7] = " K5TNA";                        // Change this
-char loc[5] = "EM20";                           // Change this
+
+// correction factor for the crystal frequency
+int32_t  correction = CORRECTION;
+
+const char call[7] = " K5TNA";                        // Change this
+const char loc[5] = "EM20";                           // Change this
 uint8_t dbm = 10;
 uint8_t tx_buffer[SYMBOL_COUNT];
 
@@ -99,9 +106,10 @@ void encode()
 void setup()
 {
    Serial.begin(9600);
-   Serial.println("------->WSPR-beacon setup");
-   Serial.println("Modified by K5TNA");
-   delay(1000);
+   Serial.println(F("------->WSPR-beacon setup"));
+   Serial.println(F("Modified by K5TNA"));
+   Serial.print(F("output frequency: "));Serial.println(freq);
+  Serial.print(F("Si5351 correction factor: "));  Serial.println(correction);
   // Use the Arduino's on-board LED as a keying indicator.
   pinMode(TX_LED_PIN, OUTPUT);
   pinMode(GREEN, OUTPUT);
@@ -111,7 +119,7 @@ void setup()
   digitalWrite(YELLOW,HIGH);
   digitalWrite(TX_LED_PIN, HIGH);
   digitalWrite(GREEN, HIGH);
-  delay(5000);
+  delay(3000);
   digitalWrite(TX_LED_PIN, LOW);
   digitalWrite(RED,LOW);
   digitalWrite(YELLOW,LOW);
@@ -125,12 +133,12 @@ void setup()
   // than 25 MHz
   /* check to see if the Si5351 is present
    */
-  Serial.println("init Si5351"); delay(1000);
+  Serial.println("init Si5351"); 
   if(!si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, CORRECTION)){
     Serial.println("si5351 init failed"); 
     delay(1000);
   }
-    Serial.println("init of Si5351 complete"); delay(10000);
+    Serial.println("init of Si5351 complete"); delay(2000);
   // Set CLK0 output
   si5351.set_freq(freq * 100, SI5351_CLK0);
   
@@ -159,7 +167,7 @@ void setup()
 
 void loop()
 {
-   Serial.println("transmission starts -- call encode");
+   Serial.println(F("transmission starts -- call encode"));
    interrupts();
   encode(); // transmit once and stop
    // blink LED when we've finished the transmit
@@ -169,5 +177,8 @@ void loop()
   digitalWrite(TX_LED_PIN, LOW);
   digitalWrite(GREEN, HIGH);
   delay(2000);
-  Serial.println("Sending completed - now send again.....");
+  
+    Serial.print(F("output frequency: "));Serial.println(freq);
+     Serial.print(F("Si5351 correction factor: "));  Serial.println(correction);
+  Serial.println(F("Sending completed - now send again....."));
 }
